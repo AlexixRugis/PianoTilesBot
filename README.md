@@ -1,5 +1,10 @@
 # PianoTilesBot
  
+## This is a fork of https://github.com/VisageDvachevsky/PianoTilesBot
+Here I am experimenting with tile recognition algorithms
+
+### Next, the original ReadMe
+ 
 This project is a bot designed to automatically play the game Piano Tiles 2. Piano Tiles 2 is a popular mobile game where players need to tap on piano tiles that appear on the screen in sync with the music. The bot utilizes computer vision and automation to detect and tap the tiles, ensuring accuracy and high-speed gameplay.
 
 Project Features:
