@@ -1,6 +1,7 @@
 import sys
 import cv2
 import numpy as np
+import keyboard
 import pyautogui
 import time
 import threading
@@ -8,7 +9,7 @@ from time import process_time
 from mss import mss
 
 
-sct = mss()
+sct = mss(with_cursor = False)
 
 ZONE_X = 550
 ZONE_Y = 170
@@ -20,7 +21,7 @@ mon = {'top': ZONE_Y, 'left': ZONE_X, 'width': ZONE_WIDTH, 'height': ZONE_HEIGHT
 def detect_black_tile(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5,5), 0)
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)
     binary_inverse = cv2.bitwise_not(binary)
     contours, _ = cv2.findContours(binary_inverse, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) > 0:
@@ -30,10 +31,18 @@ def detect_black_tile(image):
 
 def is_cursor_on_black(screenshot, x, y):
     pixel = screenshot[y, x]
-    return (pixel == [0, 0, 0, 0]).all()
+    print(pixel)
+    return (pixel == [0, 0, 0, 255]).all()
 
 def tile_detector():
-    time.sleep(2)
+    while True:
+        time.sleep(0.05)
+        if keyboard.is_pressed('q'):
+            print('\a')
+            break
+
+
+
     while not exit_flag.is_set():
         
         start_time = process_time()
@@ -62,6 +71,11 @@ def tile_detector():
         end_time = process_time()
         if (end_time - start_time) > 0:
             print(f'frame time: {1 / (end_time - start_time)}', (end_time - start_time), (d_end_time - d_start_time), (c_end_time - c_start_time))
+
+        if keyboard.is_pressed('q'):
+            exit_flag.set()
+            print('\a')
+            print('exit')
 
 exit_flag = threading.Event()
 exit_flag.clear()
