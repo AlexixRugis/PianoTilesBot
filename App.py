@@ -1,71 +1,101 @@
+import sys
 import cv2
 import numpy as np
-import threading
-from PIL import ImageGrab
-import win32api
+import keyboard
 import pyautogui
+import time
+import threading
+from time import process_time
+import mss
 
-ZONE_X = 550
-ZONE_Y = 170
-ZONE_WIDTH = 700
-ZONE_HEIGHT = 700
+class Detector:
+    ZONE_X = 550
+    ZONE_Y = 300
+    ZONE_WIDTH = 700
+    ZONE_HEIGHT = 600
+    CHECK_REGION_SIZE = 70
+    SPEED_OFFSET = 100
 
+    __sct = None
+    __kernel = None
 
-def Move(x, y):
-    win32api.SetCursorPos((x, y))
+    def __init__(self):
+        self.__sct = mss.mss(with_cursor = False)
+        self.__kernel = np.zeros((self.CHECK_REGION_SIZE, self.CHECK_REGION_SIZE))
 
-
-def ClickMouse():
-    MOUSEEVENTF_LEFTDOWN = 0x0002
-    MOUSEEVENTF_LEFTUP = 0x0004
-
-    win32api.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-    win32api.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
-
-
-def detect_black_tile(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    binary_inverse = cv2.bitwise_not(binary)
-    contours, _ = cv2.findContours(binary_inverse, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if len(contours) > 0:
-        return True, contours[0]
-    else:
-        return False, None
-
-
-def is_cursor_on_black(x, y):
-    screenshot = ImageGrab.grab(bbox=(x, y, x + 1, y + 1))
-    pixel = screenshot.getpixel((0, 0))
-    return pixel == (0, 0, 0)
-
-
-def tile_detector():
-    while not exit_flag.is_set():
-        screenshot = ImageGrab.grab()
+    def __get_black_pos(self, binary):
+        count = 0
+        for y in range(self.ZONE_HEIGHT - self.CHECK_REGION_SIZE, 0, -30):
+            for x in range(0, self.ZONE_WIDTH - self.CHECK_REGION_SIZE, 30):
+                count += 1
+                if (binary[y:y + self.CHECK_REGION_SIZE, x:x + self.CHECK_REGION_SIZE] \
+                    == self.__kernel).all():
+                    return (x + self.CHECK_REGION_SIZE // 2, y + self.CHECK_REGION_SIZE // 2)
+        return None
+    
+    def __detect_black_tile(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)
+        return self.__get_black_pos(binary)
+    
+    def __get_screenshot(self):
+        screenshot = self.__sct.grab(self.__sct.monitors[1])
         image = np.array(screenshot)
+        zone_image = image[self.ZONE_Y:self.ZONE_Y + self.ZONE_HEIGHT,
+                           self.ZONE_X:self.ZONE_X + self.ZONE_WIDTH]
+        return zone_image
+    
+    def get_tile_pos(self):
+        screenshot = self.__get_screenshot()
+        zone_position = self.__detect_black_tile(screenshot)
+        if not zone_position:
+            return None
+        
+        cursor_x = self.ZONE_X + zone_position[0]
+        cursor_y = self.ZONE_Y + zone_position[1] + self.SPEED_OFFSET
 
-        zone_image = image[ZONE_Y:ZONE_Y + ZONE_HEIGHT, ZONE_X:ZONE_X + ZONE_WIDTH]
+        return (cursor_x, cursor_y)
 
-        is_black_tile, contour = detect_black_tile(zone_image)
+def wait_until_start():
+    while True:
+        time.sleep(0.05)
+        if keyboard.is_pressed('q'):
+            time.sleep(0.1)
+            break
 
-        if is_black_tile:
-            rect = cv2.minAreaRect(contour)
-            box = cv2.boxPoints(rect)
-            box = np.int0(box)
+DEBUG = False
 
-            bottom_y = box[:, 1].max()
+def main():
+    print('---DETECTING STARTED---\a')
+    detector = Detector()
 
-            cursor_x = ZONE_X + int(rect[0][0])
-            cursor_y = ZONE_Y + int(bottom_y)
+    exit_flag = False
+    while not exit_flag:
+        start_time = process_time()
 
-            if is_cursor_on_black(cursor_x, cursor_y):
-                Move(cursor_x, cursor_y)
-                ClickMouse()
+        ###TILE DETECTION###
+        d_start_time = process_time()
+        pos = detector.get_tile_pos()
+        d_end_time = process_time()
+        ####################
 
+        ###CLICKING###
+        c_start_time = process_time()
+        if pos:
+            if DEBUG: print(f'click {pos}')
+            pyautogui.click(pos[0], pos[1], _pause=False)
+        c_end_time = process_time()                    
+        ##############
 
-exit_flag = threading.Event()
-exit_flag.clear()
+        end_time = process_time()
+        if DEBUG and (end_time - start_time) > 0:
+            print(f'frame time: {1 / (end_time - start_time)}', (end_time - start_time), (d_end_time - d_start_time), (c_end_time - c_start_time))
 
-thread = threading.Thread(target=tile_detector)
-thread.start()
+        if keyboard.is_pressed('q'):
+            exit_flag = True
+
+    print('---DETECTING ENDED---\a')
+
+if __name__ == '__main__':
+    wait_until_start()
+    main()
