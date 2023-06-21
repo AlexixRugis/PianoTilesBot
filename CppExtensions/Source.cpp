@@ -8,9 +8,9 @@ extern "C" __declspec(dllexport) unsigned char* take_screenshot(int x, int y, in
 	HGDIOBJ oldBmp = SelectObject(dcTarget, bmpTarget);
 	BitBlt(dcTarget, 0, 0, width, height, dcScreen, x, y, SRCCOPY);
 	
-    BITMAP Bmp = { 0 };
-    BITMAPINFO Info = { 0 };
-    GetObject(bmpTarget, sizeof(Bmp), &Bmp);
+	BITMAP Bmp = { 0 };
+	BITMAPINFO Info = { 0 };
+	GetObject(bmpTarget, sizeof(Bmp), &Bmp);
 	
 	Info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 	Info.bmiHeader.biWidth = width = Bmp.bmWidth;
