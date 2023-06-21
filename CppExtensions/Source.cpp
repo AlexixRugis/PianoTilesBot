@@ -1,5 +1,4 @@
 #include <Windows.h>
-#include <vector>
 #include "Source.h"
 
 extern "C" __declspec(dllexport) unsigned char* take_screenshot(int x, int y, int width, int height) {
