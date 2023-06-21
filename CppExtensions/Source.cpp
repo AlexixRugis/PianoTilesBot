@@ -33,5 +33,5 @@ extern "C" __declspec(dllexport) unsigned char* take_screenshot(int x, int y, in
 }
 
 extern "C" __declspec(dllexport) void freep(unsigned char* p) {
-    delete p;
+	delete p;
 }
