@@ -22,7 +22,6 @@ while True:
     n = np.ctypeslib.as_array(p, (500,500,4))
     n = cv2.flip(n, 0)
 
-    font = cv2.FONT_HERSHEY_SIMPLEX
     new_frame_time = time.time()
     fps = 1/(new_frame_time-prev_frame_time)
     prev_frame_time = new_frame_time
