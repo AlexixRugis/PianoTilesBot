@@ -1,11 +1,8 @@
-import sys
 import cv2
 import numpy as np
 import keyboard
 import win32api, win32con
 import time
-import threading
-from time import process_time
 import mss
 
 class Detector:
@@ -19,16 +16,15 @@ class Detector:
 
     def __init__(self):
         self.__sct = mss.mss(with_cursor = False)
-        self.__kernel = np.zeros((self.CHECK_REGION_SIZE, self.CHECK_REGION_SIZE))
         self.__monitor = {"top": self.ZONE_Y, "left": self.ZONE_X, "width": self.ZONE_WIDTH, "height": self.ZONE_HEIGHT}
         self.__pointer_offset = (self.ZONE_X, self.ZONE_Y + self.SPEED_OFFSET)
         self.__check_positions = list([(x, y) for y in range(self.ZONE_HEIGHT - self.CHECK_REGION_SIZE, 0, -30) for x in self.LINES])
 
     def __get_black_pos(self, binary):
-        region_size = self.CHECK_REGION_SIZE
-        for x, y in self.__check_positions:
-            if np.array_equal(binary[y:y + region_size, x:x + region_size], self.__kernel):
-                return (x + region_size // 2, y + region_size // 2)
+        positions = self.__check_positions
+        for x, y in positions:
+            if not binary[y, x]:
+                return (x, y)
         return None
     
     def __detect_black_tile(self, image):
@@ -47,10 +43,8 @@ class Detector:
         if not zone_position:
             return None
         
-        cursor_x = np.add(self.__pointer_offset[0], zone_position[0])
-        cursor_y = np.add(self.__pointer_offset[1], zone_position[1])
-
-        return (cursor_x, cursor_y)
+        offset_x, offset_y = self.__pointer_offset
+        return (np.add(offset_x, zone_position[0]), np.add(offset_y, zone_position[1]))
 
 def wait_until_start():
     while True:
@@ -58,9 +52,6 @@ def wait_until_start():
         if keyboard.is_pressed('q'):
             time.sleep(0.1)
             break
-
-DEBUG = False
-RECORD = False
 
 def click(x,y):
     win32api.SetCursorPos((x,y))
@@ -76,6 +67,9 @@ def draw_detector_debug(detector):
     cv2.waitKey(0)
     time.sleep(0.5)
 
+DEBUG = False
+RECORD = False
+
 def main():
     detector = Detector()
 
@@ -89,12 +83,12 @@ def main():
 
     exit_flag = False
     while not exit_flag:
-        start_time = process_time()
+        start_time = time.process_time()
 
         ###TILE DETECTION###
-        d_start_time = process_time()
+        d_start_time = time.process_time()
         pos = detector.get_tile_pos()
-        d_end_time = process_time()
+        d_end_time = time.process_time()
         ####################
 
         if RECORD and pos:
@@ -104,14 +98,14 @@ def main():
             video.write(screenshot)
 
         ###CLICKING###
-        c_start_time = process_time()
+        c_start_time = time.process_time()
         if pos:
             if DEBUG: print(f'click {pos}')
             click(pos[0], pos[1])
-        c_end_time = process_time()                    
+        c_end_time = time.process_time()                    
         ##############
 
-        end_time = process_time()
+        end_time = time.process_time()
         if DEBUG and (end_time - start_time) > 0:
             print(f'frame time: {1 / (end_time - start_time)}', (end_time - start_time), (d_end_time - d_start_time), (c_end_time - c_start_time))
 
