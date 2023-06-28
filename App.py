@@ -70,14 +70,13 @@ def draw_detector_debug(detector):
 DEBUG = False
 RECORD = False
 
-def main():
+def main_debug():
     detector = Detector()
 
     video = None
     if RECORD:
         video=cv2.VideoWriter('video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 10, (detector.ZONE_WIDTH, detector.ZONE_HEIGHT))
-    if DEBUG:
-        draw_detector_debug(detector)
+    draw_detector_debug(detector)
     wait_until_start()
     print('---DETECTING STARTED---\a')
 
@@ -100,13 +99,13 @@ def main():
         ###CLICKING###
         c_start_time = time.process_time()
         if pos:
-            if DEBUG: print(f'click {pos}')
+            print(f'click {pos}')
             click(pos[0], pos[1])
         c_end_time = time.process_time()                    
         ##############
 
         end_time = time.process_time()
-        if DEBUG and (end_time - start_time) > 0:
+        if (end_time - start_time) > 0:
             print(f'frame time: {1 / (end_time - start_time)}', (end_time - start_time), (d_end_time - d_start_time), (c_end_time - c_start_time))
 
         if keyboard.is_pressed('q'):
@@ -117,5 +116,21 @@ def main():
 
     print('---DETECTING ENDED---\a')
 
+def main():
+    detector = Detector()
+    wait_until_start()
+    print('---DETECTING STARTED---\a')
+    exit_flag = False
+    while not exit_flag:
+        pos = detector.get_tile_pos()
+        if pos: click(pos[0], pos[1])
+        if keyboard.is_pressed('q'):
+            exit_flag = True
+
+    print('---DETECTING ENDED---\a')
+
 if __name__ == '__main__':
-    main()
+    if DEBUG:
+        main_debug()
+    else:
+        main()
